@@ -1,11 +1,11 @@
 package com.cspro.edu_SpringAuthProject.auth.mapper;
 
-import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.cspro.edu_SpringAuthProject.auth.domain.UserEntity;
+import com.cspro.edu_SpringAuthProject.auth.entity.UserEntity;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long>{
-	Optional<UserEntity> findByUsername(String email);
+	Boolean existsByUsername(String username);
+	
+	UserEntity findByUsername(String username);
 }

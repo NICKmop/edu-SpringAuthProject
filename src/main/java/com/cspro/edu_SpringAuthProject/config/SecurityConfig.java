@@ -1,70 +1,126 @@
 package com.cspro.edu_SpringAuthProject.config;
 
+import java.io.IOException;
+import java.util.Collections;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.cspro.edu_SpringAuthProject.auth.mapper.RefreshRepository;
+import com.cspro.edu_SpringAuthProject.auth.service.RefreshTokenService;
+import com.cspro.edu_SpringAuthProject.customhandler.CustomFormSuccessHandler;
+import com.cspro.edu_SpringAuthProject.customhandler.CustomLogoutFilter;
+import com.cspro.edu_SpringAuthProject.util.JWTFilter;
+import com.cspro.edu_SpringAuthProject.util.JWTUtil;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 
-// jwt 인가 발급 and bcrypt passwordEncoder로 변경 필요
-@RequiredArgsConstructor
+@EnableWebSecurity
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
     
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf((csrf) -> csrf.disable());
-        http
-            .authorizeHttpRequests((auth) -> auth
-                .anyRequest().permitAll());
-//        http
-//                .formLogin((form) -> form.de);
-        return http.build();
-    }
+	private final JWTUtil jwtUtil;
+//    private final CustomOAuth2UserService customOAuth2UserService;
+    private final RefreshTokenService refreshTokenService;
+    private final RefreshRepository refreshRepository;
     
-//    추후 보안 강화시 OAUTH2 적용 하는 방향으로
-//    @Bean
-//    @Order(Ordered.HIGHEST_PRECEDENCE)
-//    public SecurityFilterChain authorizationServer(HttpSecurity http) throws Exception {
-//
-//        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-//
-//        http
-//                .getConfigurer(OAuth2AuthorizationServerConfigurer.class);
-//                        
-//        http
-//                .exceptionHandling((exceptions) -> exceptions
-//                        .defaultAuthenticationEntryPointFor(
-//                                new LoginUrlAuthenticationEntryPoint("/login"),
-//                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-//                        )
-//                );
-//
-//        return http.build();
-//    }
-    
-    @Bean
+	@Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
-//    @Bean
-//    public AuthorizationServerSettings authorizationServerSettings() {
-//
-//        return AuthorizationServerSettings.builder()
-//                .issuer("http://localhost:9000")
-//                .authorizationEndpoint("/oauth2/v1/authorize")
-//                .tokenEndpoint("/oauth2/v1/token")
-//                .tokenIntrospectionEndpoint("/oauth2/v1/introspect") // 토큰 상태
-//                .tokenRevocationEndpoint("/oauth2/v1/revoke") // 토큰 폐기 RFC 7009
-//                .jwkSetEndpoint("/oauth2/v1/jwks") // 공개키 확인
-//                .oidcLogoutEndpoint("/connect/v1/logout")
-//                .oidcUserInfoEndpoint("/connect/v1/userinfo") // 리소스 서버 유저 정보 연관
-//                .oidcClientRegistrationEndpoint("/connect/v1/register") // OAuth2 사용 신청
-//                .build();
-//    }
+	
+	@Bean
+    public AuthenticationFailureHandler authenticationFailureHandler(){
+        return new AuthenticationFailureHandler() {
+            @Override
+            public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+                System.out.println("exception = " + exception);
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            }
+        };
+    }
+	
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    	// not use : disable        
+    	http
+    		.httpBasic((basic) -> basic.disable())
+    		.csrf((csrf) -> csrf.disable());
+    	// authorization
+        http.authorizeHttpRequests((auth) -> auth
+        		.requestMatchers("/", "/login", "/signup").permitAll()
+                .requestMatchers("/admin").hasRole("ADMIN")
+                .anyRequest().authenticated());
+    	// form login    	
+    	http
+    		.formLogin((form) -> form
+    				.loginPage("/login")
+    				.loginProcessingUrl("/login-proc")
+    				.usernameParameter("username")
+    				.passwordParameter("password")
+    				.successHandler(new CustomFormSuccessHandler(jwtUtil, refreshTokenService))
+    				.failureHandler(authenticationFailureHandler())
+    				.permitAll());
+    	// logout
+    	http
+    		.logout((auth) -> auth
+    				.logoutSuccessUrl("/")
+    				.permitAll());
+    	// cors
+        http
+                .cors((cors) -> cors.configurationSource(new CorsConfigurationSource() {
+                    @Override
+                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                        CorsConfiguration configuration = new CorsConfiguration();
+                        configuration.setAllowedOrigins(Collections.singletonList("http://localhost:8080/"));
+                        configuration.setAllowedMethods(Collections.singletonList("*"));
+                        configuration.setAllowCredentials(true);
+                        configuration.setAllowedHeaders(Collections.singletonList("*"));
+                        configuration.setMaxAge(3600L);
+
+                        configuration.setExposedHeaders(Collections.singletonList("access"));
+
+                        return configuration;
+                    }
+                }));
+        // 인가되지 않은 사용자에 대한 exception -> 프론트엔드로 코드 응답
+        http.exceptionHandling((exception) ->
+                exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        }));
+        // jwt filter
+        http
+        	.addFilterAfter(new JWTFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
+        
+        // custom logout filter
+        http
+        	.addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshRepository), LogoutFilter.class);
+        
+        // session stateless
+        http
+        	.sessionManagement((session) -> session
+        			.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        	
+        return http.build();
+    }
 }
