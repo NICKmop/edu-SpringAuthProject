@@ -18,7 +18,7 @@ public class AuthApiController {
 	private final AuthSignUpService authSignUpService;
 	
 	@PostMapping("/signup")
-	public String signUpProc(@RequestBody SignInDto signInDto) {
+	public String signUpProc(SignInDto signInDto) {
 		authSignUpService.signUp(signInDto);
 		return String.format("sign user : %s ", signInDto.getUsername());
 	}
