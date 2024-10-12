@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -68,7 +69,7 @@ public class SecurityConfig {
     	// authorization
         http.authorizeHttpRequests((auth) -> auth
         		.requestMatchers("/", "/login", "/signup").permitAll()
-                .requestMatchers("/admin").hasRole("ADMIN")
+                .requestMatchers("/main", "/main/**").hasRole("ADMIN")
                 .anyRequest().authenticated());
     	// form login    	
     	http
@@ -111,7 +112,6 @@ public class SecurityConfig {
         // jwt filter
         http
         	.addFilterAfter(new JWTFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-        
         // custom logout filter
         http
         	.addFilterBefore(new CustomLogoutFilter(jwtUtil, refreshRepository), LogoutFilter.class);

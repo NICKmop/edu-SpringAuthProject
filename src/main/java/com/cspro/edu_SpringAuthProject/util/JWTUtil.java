@@ -2,6 +2,8 @@ package com.cspro.edu_SpringAuthProject.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
+@Slf4j
 public class JWTUtil {
     private final SecretKey secretKey;
 
@@ -39,8 +42,9 @@ public class JWTUtil {
     public Boolean isExpired(String token){
         return getPayload(token).getExpiration().before(new Date());
     }
-
+    
     public String createJwt(String category, String username, String role, Long expiredMs){
+    	log.info( "role : {} /// username : {}", role, username );
         return Jwts.builder()
                 .claim("category", category)
                 .claim("username", username)

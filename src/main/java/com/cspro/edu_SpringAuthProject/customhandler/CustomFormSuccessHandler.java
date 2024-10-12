@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * refresh -> 쿠키 ::::
  */
 @RequiredArgsConstructor
+@Slf4j
 public class CustomFormSuccessHandler extends SimpleUrlAuthenticationSuccessHandler{
 	private final JWTUtil jwtUtil;
 	private final RefreshTokenService refreshTokenService;
@@ -39,19 +41,30 @@ public class CustomFormSuccessHandler extends SimpleUrlAuthenticationSuccessHand
 		// access 60 * 10 * 1000L: 1시간
         String access = jwtUtil.createJwt("access", username, role, 60 * 10 * 1000L);
         response.setHeader("access", access);
-		
+        
 		// refresh
 		Integer expires = 24 * 60 * 60;
 		String refresh = jwtUtil.createJwt("refresh", username, role, expires * 1000L);
 		response.addCookie(CookieUtil.createCookie("refresh", refresh, expires));
 		
+		log.info("CustomFormSuccessHandler header : {}", response.getHeader("access"));
+		
 		// refresh Token DB :::: SAVE
 		refreshTokenService.saveRefresh(username, expires, refresh);
+
+		// Log the access token
+	    log.info("CustomFormSuccessHandler: access token added to cookie");
+
+	    // Redirect to /main
+//	    getRedirectStrategy().sendRedirect(request, response, "/main");
 		
 		// JSON 직렬화 ::: put [ username ]
-		Map<String, Object> responseData = new HashMap<>();
-		responseData.put("name", username);
-		
-		new ObjectMapper().writeValue(response.getWriter(), responseData);
+		Map<String, String> responseData = new HashMap<>();
+	    responseData.put("access", access);
+	    responseData.put("refresh", refresh);
+//	    responseData.put("redirectUrl", "/main");
+//
+//	    response.setContentType("application/json");
+	    new ObjectMapper().writeValue(response.getWriter(), responseData);
 	}
 }
