@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
@@ -44,6 +45,20 @@ public class SecurityConfig {
     private final RefreshTokenService refreshTokenService;
     private final RefreshRepository refreshRepository;
     
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+    		.requestMatchers("/favicon.ico")
+            .requestMatchers("/assets/**")
+            .requestMatchers("/avatars/**")
+            .requestMatchers("/webjars/**")
+            .requestMatchers("/files/**")
+            .requestMatchers("/images/**")
+            .requestMatchers("/videos/**")
+            .requestMatchers("/audios/**")
+            .requestMatchers("/static/**");
+    }
+    
 	@Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
@@ -55,6 +70,7 @@ public class SecurityConfig {
             @Override
             public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
                 System.out.println("exception = " + exception);
+                System.out.println("exception = " + exception.getMessage());
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());
             }
         };
@@ -84,7 +100,8 @@ public class SecurityConfig {
     	// logout
     	http
     		.logout((auth) -> auth
-    				.logoutSuccessUrl("/")
+    				.invalidateHttpSession(true)
+                    .deleteCookies("refresh")
     				.permitAll());
     	// cors
         http

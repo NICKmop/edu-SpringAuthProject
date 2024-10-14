@@ -47,24 +47,27 @@ public class CustomFormSuccessHandler extends SimpleUrlAuthenticationSuccessHand
 		String refresh = jwtUtil.createJwt("refresh", username, role, expires * 1000L);
 		response.addCookie(CookieUtil.createCookie("refresh", refresh, expires));
 		
-		log.info("CustomFormSuccessHandler header : {}", response.getHeader("access"));
+//		log.info("CustomFormSuccessHandler header : {}", response.getHeader("access"));
 		
 		// refresh Token DB :::: SAVE
 		refreshTokenService.saveRefresh(username, expires, refresh);
 
 		// Log the access token
-	    log.info("CustomFormSuccessHandler: access token added to cookie");
-
-	    // Redirect to /main
-//	    getRedirectStrategy().sendRedirect(request, response, "/main");
-		
-		// JSON 직렬화 ::: put [ username ]
-		Map<String, String> responseData = new HashMap<>();
+//	    log.info("CustomFormSuccessHandler: access token added to cookie");
+		// Redirect to /main
+	    getRedirectStrategy().sendRedirect(request, response, "/main");
+	    
+	    // JSON DATA 직렬 화
+	    Map<String, String> responseData = new HashMap<>();
 	    responseData.put("access", access);
 	    responseData.put("refresh", refresh);
-//	    responseData.put("redirectUrl", "/main");
-//
-//	    response.setContentType("application/json");
+
+	    // Set response type and write JSON
+	    response.setContentType("application/json");
+	    response.setCharacterEncoding("UTF-8");
+
+	    log.info("Writing JSON response: {}", responseData);
 	    new ObjectMapper().writeValue(response.getWriter(), responseData);
+	    
 	}
 }

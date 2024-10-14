@@ -15,22 +15,7 @@
             <input type="password" name="password" placeholder="password" /><br>
             <input type="submit" value="SignIn" />
         </form>
-        <!-- test -->
-         <button id="fetch_id">fetch</button>
     </div>
 </body>
-<script>
-    document.getElementById("fetch_id").addEventListener("click", function (params) {
-        fetch("/login-proc", {
-            method: "POST",
-            body: JSON.stringify({
-                username: "test",
-                password: "123qwe",
-            }),
-            })
-            .then((response) => response.json())
-            .then((result) => console.log(result));
-    })
 
-</script>
 </html>

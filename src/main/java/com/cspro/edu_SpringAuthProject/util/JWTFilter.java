@@ -45,7 +45,6 @@ public class JWTFilter extends OncePerRequestFilter {
 	            }
 	        }
 	    }
-	    
 		if(accessToken == null) {
 			filterChain.doFilter(request, response);
 			return;
@@ -83,15 +82,9 @@ public class JWTFilter extends OncePerRequestFilter {
 //	->>>> header 원인 찾아야함 
 //	@Override
 //	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws IOException, ServletException {
-//		Enumeration<String> headerNames = request.getHeaderNames();
-//		while (headerNames.hasMoreElements()) {
-//		    String headerName = headerNames.nextElement();
-//		    log.info("Header: {} = {}", headerName, request.getHeader(headerName));
-//		}
-//		
 //		String access = null;
 //		access = request.getHeader("access");
-//		
+//		log.info("access : {}", access);
 //		// access = "eyJhbGciOiJIUzI1NiJ9.eyJjYXRlZ29yeSI6ImFjY2VzcyIsInVzZXJuYW1lIjoidGVzdCIsInJvbGUiOiJST0xFX0FETUlOIiwiaWF0IjoxNzI4NzMzNDU5LCJleHAiOjE3Mjg3MzQwNTl9.hhf5PXx7hrWPEvLxnEuPRyJKHvJfoDLH0jHk2NvM1XI";
 //		
 //		// token null check
